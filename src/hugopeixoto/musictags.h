@@ -1,5 +1,5 @@
-#ifndef HUGOPEIXOTO_MUSICTAGS_
-#define HUGOPEIXOTO_MUSICTAGS_
+#ifndef HUGOPEIXOTO_MUSICTAGS_H_
+#define HUGOPEIXOTO_MUSICTAGS_H_
 
 #include <string>
 #include "hugopeixoto/nullable.h"

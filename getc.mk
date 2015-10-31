@@ -5,7 +5,7 @@ LIBNAME=hugopeixoto-musictags
 REQUIRED_LIBS=
 INCLUDE_PATH=src/
 
-SRC=src/hugopeixoto/musictags/id3/v1.cc src/hugopeixoto/musictags/parse.cc src/hugopeixoto/musictags/utils.cc src/hugopeixoto/musictags/id3/v2.cc
+SRC=src/hugopeixoto/musictags/id3/v1.cc src/hugopeixoto/musictags/parse.cc src/hugopeixoto/musictags/utils.cc src/hugopeixoto/musictags/id3/v2.cc src/hugopeixoto/musictags/flac.cc
 
 TEST_NAME=test
 TEST_SRC=main.cc
