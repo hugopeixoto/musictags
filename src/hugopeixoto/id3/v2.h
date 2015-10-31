@@ -5,7 +5,7 @@
 
 namespace id3 {
   namespace v2 {
-    Nullable<MusicMetadata> load(const std::string& );
+    Nullable<MusicMetadata> load(FILE* fp);
   }
 }
 

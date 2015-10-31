@@ -104,50 +104,70 @@ Nullable<std::string> read_string(FILE *fp, uint32_t size, uint16_t flags = 0) {
   }
 }
 
-Nullable<id3::MusicMetadata> load_v22(const id3_v2 &tags, FILE *fp) {
+template<typename Header>
+Nullable<id3::MusicMetadata> load_v2x(const id3_v2 &tags, FILE *fp) {
   id3::MusicMetadata result;
-
-  result.version = "ID3v2.2";
-
-  struct {
-    uint8_t identifier[3];
-    uint8_t size_[3];
-
-    uint32_t size() const {
-      return (size_[0] << 16) | (size_[1] << 8) | (size_[2] << 0);
-    }
-
-    bool null() const {
-      return size() == 0 && identifier[0] == 0 && identifier[1] == 0 &&
-             identifier[2] == 0;
-    }
-
-    bool is(const char* tag) const {
-      return memcmp(identifier, tag, 3) == 0;
-    }
-  } FrameHeader;
+  Header header;
 
   uint32_t tags_size = synchsafe_int(tags.size);
   uint32_t total_read = 0;
-  while (total_read + 6 < tags_size) {
-    fread(&FrameHeader, sizeof(FrameHeader), 1, fp);
-    if (FrameHeader.null()) {
+  while (total_read + header.length() < tags_size) {
+    if (!header.read(fp)) {
       break;
     }
 
-    if (FrameHeader.is("TP1")) {
-      result.artist = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TAL")) {
-      result.album = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TT2")) {
-      result.title = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TRK")) {
-      result.track_no = atoi(read_string(fp, FrameHeader.size()).get().c_str());
+    if (header.is(Header::Artist)) {
+      result.artist = read_string(fp, header.payload_length).get();
+    } else if (header.is(Header::Album)) {
+      result.album = read_string(fp, header.payload_length).get();
+    } else if (header.is(Header::Title)) {
+      result.title = read_string(fp, header.payload_length).get();
+    } else if (header.is(Header::Track)) {
+      result.track_no = atoi(read_string(fp, header.payload_length).get().c_str());
     } else {
-      fseek(fp, FrameHeader.size(), SEEK_CUR);
+      fseek(fp, header.payload_length, SEEK_CUR);
     }
 
-    total_read += 6 + FrameHeader.size();
+    total_read += header.length() + header.payload_length;
+  }
+
+  return result;
+}
+
+struct v22_frame_header {
+  uint8_t identifier[3];
+  uint32_t payload_length;
+
+  uint32_t length() const { return 6; }
+
+  bool read(FILE* fp) {
+    uint8_t buffer[6] = { 0 };
+    fread(&buffer, length(), 1, fp);
+
+    identifier[0] = buffer[0];
+    identifier[1] = buffer[1];
+    identifier[2] = buffer[2];
+
+    payload_length = (buffer[3] << 16 | buffer[4] << 8 | buffer[5] << 0);
+
+    return identifier[0] != 0 || identifier[1] != 0 || identifier[2] != 0 || payload_length != 0;
+  }
+
+  bool is(const char* tag) const {
+    return memcmp(identifier, tag, 3) == 0;
+  }
+
+  constexpr static const char* const Artist = "TP1";
+  constexpr static const char* const Album = "TAL";
+  constexpr static const char* const Title = "TT2";
+  constexpr static const char* const Track = "TRK";
+};
+
+Nullable<id3::MusicMetadata> load_v22(const id3_v2 &tags, FILE *fp) {
+  auto result = load_v2x<v22_frame_header>(tags, fp);
+
+  if (!result.null()) {
+    result.get().version = "ID3v2.2";
   }
 
   return result;
@@ -159,11 +179,40 @@ struct ID3v2_3ExtendedHeader {
   uint32_t padding_size;
 };
 
+struct v23_frame_header {
+  uint8_t identifier[4];
+  uint32_t payload_length;
+  uint16_t flags;
+
+  uint32_t length() const { return 10; }
+
+  bool read(FILE* fp) {
+    uint8_t buffer[10] = { 0 };
+    fread(&buffer, length(), 1, fp);
+
+    identifier[0] = buffer[0];
+    identifier[1] = buffer[1];
+    identifier[2] = buffer[2];
+    identifier[3] = buffer[3];
+
+    payload_length = (buffer[4] << 24 | buffer[5] << 16 | buffer[6] << 8 | buffer[7] << 0);
+
+    flags = buffer[8] << 0 | buffer[9] << 8;
+
+    return flags != 0 || payload_length != 0 || identifier[0] != 0 || identifier[1] != 0 || identifier[2] != 0 || identifier[3] != 0;
+  }
+
+  bool is(const char* tag) const {
+    return memcmp(identifier, tag, 4) == 0;
+  }
+
+  constexpr static const char* const Artist = "TPE1";
+  constexpr static const char* const Album = "TALB";
+  constexpr static const char* const Title = "TIT2";
+  constexpr static const char* const Track = "TRCK";
+};
+
 Nullable<id3::MusicMetadata> load_v23(const id3_v2 &tags, FILE *fp) {
-  id3::MusicMetadata result;
-
-  result.version = "ID3v2.3";
-
   if (tags.flags & 0x40) {
     ID3v2_3ExtendedHeader ex_header;
     fread(&ex_header, sizeof(ex_header), 1, fp);
@@ -171,122 +220,83 @@ Nullable<id3::MusicMetadata> load_v23(const id3_v2 &tags, FILE *fp) {
       fseek(fp, 4, SEEK_CUR); // skip the CRC
   }
 
-  struct {
-    uint8_t identifier[4];
-    uint8_t size_[4];
-    uint16_t flags;
+  auto result = load_v2x<v23_frame_header>(tags, fp);
 
-    uint32_t size() const {
-      return (size_[0] << 24) | (size_[1] << 16) | (size_[2] << 8) |
-             (size_[3] << 0);
-    }
-
-    bool is(const char* tag) const {
-      return memcmp(identifier, tag, 4) == 0;
-    }
-  } FrameHeader;
-
-  uint8_t FinalFrame[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-  uint32_t tags_size = synchsafe_int(tags.size);
-  uint32_t total_read = 0;
-  while (total_read + 10 < tags_size) {
-    fread(&FrameHeader, sizeof(FrameHeader), 1, fp);
-    if (memcmp(&FrameHeader, &FinalFrame, sizeof(FrameHeader)) == 0) {
-      break;
-    }
-
-    if (FrameHeader.is("TPE1")) {
-      result.artist = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TALB")) {
-      result.album = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TIT2")) {
-      result.title = read_string(fp, FrameHeader.size()).get();
-    } else if (FrameHeader.is("TRCK")) {
-      result.track_no = atoi(read_string(fp, FrameHeader.size()).get().c_str());
-    } else {
-      fseek(fp, FrameHeader.size(), SEEK_CUR);
-    }
-
-    total_read += 10 + FrameHeader.size();
+  if (!result.null()) {
+    result.get().version = "ID3v2.3";
   }
 
   return result;
 }
 
+struct v24_frame_header {
+  uint8_t identifier[4];
+  uint32_t payload_length;
+  uint16_t flags;
+
+  uint32_t length() const { return 10; }
+
+  bool read(FILE* fp) {
+    uint8_t buffer[10] = { 0 };
+    fread(&buffer, length(), 1, fp);
+
+    identifier[0] = buffer[0];
+    identifier[1] = buffer[1];
+    identifier[2] = buffer[2];
+    identifier[3] = buffer[3];
+
+    payload_length = synchsafe_int(buffer + 4);
+
+    flags = buffer[8] << 0 | buffer[9] << 8;
+
+    return flags != 0 || payload_length != 0 || identifier[0] != 0 || identifier[1] != 0 || identifier[2] != 0 || identifier[3] != 0;
+  }
+
+  bool is(const char* tag) const {
+    return memcmp(identifier, tag, 4) == 0;
+  }
+
+  constexpr static const char* const Artist = "TPE1";
+  constexpr static const char* const Album = "TALB";
+  constexpr static const char* const Title = "TIT2";
+  constexpr static const char* const Track = "TRCK";
+};
+
+
 Nullable<id3::MusicMetadata> load_v24(const id3_v2 &tags, FILE *fp) {
-  id3::MusicMetadata result;
-
-  result.version = "ID3v2.4";
-
   if (tags.flags & 0x40) {
     uint32_t extended_header_size;
     fread(&extended_header_size, 4, 1, fp);
     fseek(fp, extended_header_size - 4, SEEK_CUR);
   }
 
-  struct {
-    uint8_t identifier[4];
-    uint8_t size_[4];
-    uint16_t flags;
-    uint32_t size() const { return synchsafe_int(size_); }
-    bool is(const char* tag) const {
-      return memcmp(identifier, tag, 4) == 0;
-    }
-  } FrameHeader;
+  auto result = load_v2x<v24_frame_header>(tags, fp);
 
-  uint8_t FinalFrame[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-
-  uint32_t tags_size = synchsafe_int(tags.size);
-  uint32_t total_read = 0;
-  while (total_read + 10 < tags_size) {
-    fread(&FrameHeader, sizeof(FrameHeader), 1, fp);
-
-    if (memcmp(&FrameHeader, &FinalFrame, sizeof(FrameHeader)) == 0) {
-      break;
-    }
-
-    if (FrameHeader.is("TPE1")) {
-      result.artist = read_string(fp, FrameHeader.size(), FrameHeader.flags).get();
-    } else if (FrameHeader.is("TALB")) {
-      result.album = read_string(fp, FrameHeader.size(), FrameHeader.flags).get();
-    } else if (FrameHeader.is("TIT2")) {
-      result.title = read_string(fp, FrameHeader.size(), FrameHeader.flags).get();
-    } else if (FrameHeader.is("TRCK")) {
-      result.track_no = atoi(read_string(fp, FrameHeader.size(), FrameHeader.flags).get().c_str());
-    } else {
-      fseek(fp, FrameHeader.size(), SEEK_CUR);
-    }
-
-    total_read += 10 + FrameHeader.size();
+  if (!result.null()) {
+    result.get().version = "ID3v2.4";
   }
 
   return result;
 }
 
 
-Nullable<id3::MusicMetadata> id3::v2::load(const std::string &filename) {
+Nullable<id3::MusicMetadata> id3::v2::load(FILE* fp) {
   id3_v2 tags;
 
-  FILE *fp = fopen(filename.c_str(), "rb");
+  fseek(fp, 0, SEEK_SET);
+  if (fread(&tags, sizeof(tags), 1, fp) == 1) {
+    if (valid(tags)) {
+      //printf("ID3v2.%u.%u %s\n", tags.major, tags.minor, filename.c_str());
 
-  if (fp) {
-    if (fread(&tags, sizeof(tags), 1, fp) == 1) {
-      if (valid(tags)) {
-        //printf("ID3v2.%u.%u %s\n", tags.major, tags.minor, filename.c_str());
-
-        // synchsafe(tags.size));
-        switch (tags.major) {
-        case 4:
-          return load_v24(tags, fp);
-        case 3:
-          return load_v23(tags, fp);
-        case 2:
-          return load_v22(tags, fp);
-        }
+      switch (tags.major) {
+      case 4:
+        return load_v24(tags, fp);
+      case 3:
+        return load_v23(tags, fp);
+      case 2:
+        return load_v22(tags, fp);
       }
     }
-    fclose(fp);
   }
 
   return Nullable<id3::MusicMetadata>();

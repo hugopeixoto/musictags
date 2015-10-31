@@ -1,21 +1,16 @@
-//#include <iostream>
-//#include <cstring>
-//#include <cstdlib>
-//#include <cstdio>
-//#include <cctype>
-//#include <stdint.h>
-//#include <iconv.h>
-
 #include "hugopeixoto/id3.h"
 #include "hugopeixoto/id3/v1.h"
 #include "hugopeixoto/id3/v2.h"
 
 Nullable<id3::MusicMetadata> id3::load(const std::string& filename) {
-  auto v2 = id3::v2::load(filename);
+  FILE *fp = fopen(filename.c_str(), "rb");
 
-  if (!v2.null()) {
-    return v2;
+  auto result = id3::v2::load(fp);
+
+  if (result.null()) {
+    result = id3::v1::load(fp);
   }
 
-  return id3::v1::load(filename);
+  fclose(fp);
+  return result;
 }
