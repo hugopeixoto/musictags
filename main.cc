@@ -7,11 +7,12 @@ int main(int argc, char* argv[]) {
   if (response.null()) {
     std::cout << "no tags detected in " << argv[1] << std::endl;
   } else {
-    std::cout << response.get().version << std::endl;
-    std::cout << "artist: " << response.get().artist << std::endl;
-    std::cout << "album:  " << response.get().album << std::endl;
-    std::cout << "track:  " << response.get().track_no << std::endl;
-    std::cout << "title:  " << response.get().title << std::endl;
+    auto tags = response.get();
+    std::cout << tags.version << std::endl;
+    std::cout << "artist: " << tags.artist << std::endl;
+    std::cout << "album:  " << tags.album << std::endl;
+    std::cout << "track:  " << tags.track_no << std::endl;
+    std::cout << "title:  " << tags.title << std::endl;
   }
 
   return 0;
