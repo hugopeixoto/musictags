@@ -1,5 +1,5 @@
-#include "hugopeixoto/id3/v2.h"
-#include "hugopeixoto/id3/utils.h"
+#include "hugopeixoto/musictags/id3/v2.h"
+#include "hugopeixoto/musictags/utils.h"
 #include <cstdlib>
 #include <iconv.h>
 
@@ -105,8 +105,8 @@ Nullable<std::string> read_string(FILE *fp, uint32_t size, uint16_t flags = 0) {
 }
 
 template<typename Header>
-Nullable<id3::MusicMetadata> load_v2x(const id3_v2 &tags, FILE *fp) {
-  id3::MusicMetadata result;
+Nullable<musictags::Metadata> load_v2x(const id3_v2 &tags, FILE *fp) {
+  musictags::Metadata result;
   Header header;
 
   uint32_t tags_size = synchsafe_int(tags.size);
@@ -163,7 +163,7 @@ struct v22_frame_header {
   constexpr static const char* const Track = "TRK";
 };
 
-Nullable<id3::MusicMetadata> load_v22(const id3_v2 &tags, FILE *fp) {
+Nullable<musictags::Metadata> load_v22(const id3_v2 &tags, FILE *fp) {
   auto result = load_v2x<v22_frame_header>(tags, fp);
 
   if (!result.null()) {
@@ -212,7 +212,7 @@ struct v23_frame_header {
   constexpr static const char* const Track = "TRCK";
 };
 
-Nullable<id3::MusicMetadata> load_v23(const id3_v2 &tags, FILE *fp) {
+Nullable<musictags::Metadata> load_v23(const id3_v2 &tags, FILE *fp) {
   if (tags.flags & 0x40) {
     ID3v2_3ExtendedHeader ex_header;
     fread(&ex_header, sizeof(ex_header), 1, fp);
@@ -263,7 +263,7 @@ struct v24_frame_header {
 };
 
 
-Nullable<id3::MusicMetadata> load_v24(const id3_v2 &tags, FILE *fp) {
+Nullable<musictags::Metadata> load_v24(const id3_v2 &tags, FILE *fp) {
   if (tags.flags & 0x40) {
     uint32_t extended_header_size;
     fread(&extended_header_size, 4, 1, fp);
@@ -280,7 +280,7 @@ Nullable<id3::MusicMetadata> load_v24(const id3_v2 &tags, FILE *fp) {
 }
 
 
-Nullable<id3::MusicMetadata> id3::v2::load(FILE* fp) {
+Nullable<musictags::Metadata> musictags::id3::v2::load(FILE* fp) {
   id3_v2 tags;
 
   fseek(fp, 0, SEEK_SET);
@@ -299,5 +299,5 @@ Nullable<id3::MusicMetadata> id3::v2::load(FILE* fp) {
     }
   }
 
-  return Nullable<id3::MusicMetadata>();
+  return Nullable<musictags::Metadata>();
 }

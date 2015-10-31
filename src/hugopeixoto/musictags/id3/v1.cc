@@ -1,5 +1,5 @@
-#include "hugopeixoto/id3/v1.h"
-#include "hugopeixoto/id3/utils.h"
+#include "hugopeixoto/musictags/id3/v1.h"
+#include "hugopeixoto/musictags/utils.h"
 #include <cstdlib>
 
 struct id3_v1 {
@@ -12,10 +12,10 @@ struct id3_v1 {
   unsigned char genre;
 };
 
-Nullable<id3::MusicMetadata> id3::v1::load(FILE* fp) {
+Nullable<musictags::Metadata> musictags::id3::v1::load(FILE* fp) {
   id3_v1 tags;
 
-  MusicMetadata result;
+  Metadata result;
 
   result.version = "ID3v1.0";
 
@@ -37,5 +37,5 @@ Nullable<id3::MusicMetadata> id3::v1::load(FILE* fp) {
     }
   }
 
-  return Nullable<id3::MusicMetadata>();
+  return Nullable<musictags::Metadata>();
 }

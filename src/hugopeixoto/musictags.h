@@ -1,11 +1,11 @@
-#ifndef HUGOPEIXOTO_ID3_
-#define HUGOPEIXOTO_ID3_
+#ifndef HUGOPEIXOTO_MUSICTAGS_
+#define HUGOPEIXOTO_MUSICTAGS_
 
 #include <string>
 #include "hugopeixoto/nullable.h"
 
-namespace id3 {
-  struct MusicMetadata {
+namespace musictags {
+  struct Metadata {
     std::string version;
     std::string artist;
     std::string album;
@@ -14,7 +14,7 @@ namespace id3 {
     uint16_t year;
   };
 
-  Nullable<MusicMetadata> load(const std::string& filename);
+  ::Nullable<Metadata> load(const std::string& filename);
 }
 
 #endif
