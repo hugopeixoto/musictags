@@ -12,7 +12,7 @@ struct id3_v1 {
   unsigned char genre;
 };
 
-Nullable<musictags::Metadata> musictags::id3::v1::load(FILE* fp) {
+Optional<musictags::Metadata> musictags::id3::v1::load(FILE* fp) {
   id3_v1 tags;
 
   Metadata result;
@@ -37,5 +37,5 @@ Nullable<musictags::Metadata> musictags::id3::v1::load(FILE* fp) {
     }
   }
 
-  return Nullable<musictags::Metadata>();
+  return Optional<musictags::Metadata>();
 }

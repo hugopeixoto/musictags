@@ -2,7 +2,7 @@
 #define HUGOPEIXOTO_MUSICTAGS_H_
 
 #include <string>
-#include "hugopeixoto/nullable.h"
+#include "hugopeixoto/optional.h"
 
 namespace musictags {
   struct Metadata {
@@ -14,7 +14,7 @@ namespace musictags {
     uint16_t year;
   };
 
-  ::Nullable<Metadata> load(const std::string& filename);
+  ::Optional<Metadata> load(const std::string& filename);
 }
 
 #endif

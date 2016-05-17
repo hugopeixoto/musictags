@@ -26,7 +26,7 @@ struct flac_header {
   }
 };
 
-Nullable<musictags::Metadata> vorbis_load(FILE* fp) {
+Optional<musictags::Metadata> vorbis_load(FILE* fp) {
   musictags::Metadata result;
 
   uint32_t length;
@@ -65,7 +65,7 @@ Nullable<musictags::Metadata> vorbis_load(FILE* fp) {
 }
 
 
-Nullable<musictags::Metadata> musictags::flac::load(FILE* fp) {
+Optional<musictags::Metadata> musictags::flac::load(FILE* fp) {
   char buffer[4];
 
   if (fseek(fp, 0, SEEK_SET) == 0) {
@@ -85,5 +85,5 @@ Nullable<musictags::Metadata> musictags::flac::load(FILE* fp) {
     }
   }
 
-  return Nullable<musictags::Metadata>();
+  return Optional<musictags::Metadata>();
 }

@@ -6,7 +6,7 @@
 namespace musictags {
   namespace id3 {
     namespace v1 {
-      Nullable<Metadata> load(FILE* fp);
+      Optional<Metadata> load(FILE* fp);
     }
   }
 }

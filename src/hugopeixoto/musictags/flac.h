@@ -6,7 +6,7 @@
 
 namespace musictags {
   namespace flac {
-    ::Nullable<Metadata> load(FILE* fp);
+    ::Optional<Metadata> load(FILE* fp);
   }
 }
 

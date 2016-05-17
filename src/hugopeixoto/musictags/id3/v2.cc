@@ -46,14 +46,14 @@ std::string readOther(const char* charset, uint32_t size, char *src) {
   return result;
 }
 
-Nullable<std::string> read_string(FILE *fp, uint32_t size, uint16_t flags = 0) {
+Optional<std::string> read_string(FILE *fp, uint32_t size, uint16_t flags = 0) {
   uint8_t encoding;
   char *raw;
 
   if (flags & 0x0200) {
     // assert that 0x0100
     if (!(flags & 0x100)) {
-      return Nullable<std::string>();
+      return Optional<std::string>();
     }
 
     uint8_t buffer[4];
@@ -100,12 +100,12 @@ Nullable<std::string> read_string(FILE *fp, uint32_t size, uint16_t flags = 0) {
   case 0x03:
     return readUTF_8(size, raw + 1);
   default:
-    return Nullable<std::string>();
+    return Optional<std::string>();
   }
 }
 
 template<typename Header>
-Nullable<musictags::Metadata> load_v2x(const id3_v2 &tags, FILE *fp) {
+musictags::Metadata load_v2x(const id3_v2 &tags, FILE *fp) {
   musictags::Metadata result;
   Header header;
 
@@ -117,13 +117,13 @@ Nullable<musictags::Metadata> load_v2x(const id3_v2 &tags, FILE *fp) {
     }
 
     if (header.is(Header::Artist)) {
-      result.artist = read_string(fp, header.payload_length).get();
+      result.artist = read_string(fp, header.payload_length).orDefault("");
     } else if (header.is(Header::Album)) {
-      result.album = read_string(fp, header.payload_length).get();
+      result.album = read_string(fp, header.payload_length).orDefault("");
     } else if (header.is(Header::Title)) {
-      result.title = read_string(fp, header.payload_length).get();
+      result.title = read_string(fp, header.payload_length).orDefault("");
     } else if (header.is(Header::Track)) {
-      result.track_no = atoi(read_string(fp, header.payload_length).get().c_str());
+      result.track_no = atoi(read_string(fp, header.payload_length).orDefault("0").c_str());
     } else {
       fseek(fp, header.payload_length, SEEK_CUR);
     }
@@ -163,12 +163,10 @@ struct v22_frame_header {
   constexpr static const char* const Track = "TRK";
 };
 
-Nullable<musictags::Metadata> load_v22(const id3_v2 &tags, FILE *fp) {
+Optional<musictags::Metadata> load_v22(const id3_v2 &tags, FILE *fp) {
   auto result = load_v2x<v22_frame_header>(tags, fp);
 
-  if (!result.null()) {
-    result.get().version = "ID3v2.2";
-  }
+  result.version = "ID3v2.2";
 
   return result;
 }
@@ -212,7 +210,7 @@ struct v23_frame_header {
   constexpr static const char* const Track = "TRCK";
 };
 
-Nullable<musictags::Metadata> load_v23(const id3_v2 &tags, FILE *fp) {
+Optional<musictags::Metadata> load_v23(const id3_v2 &tags, FILE *fp) {
   if (tags.flags & 0x40) {
     ID3v2_3ExtendedHeader ex_header;
     fread(&ex_header, sizeof(ex_header), 1, fp);
@@ -222,9 +220,7 @@ Nullable<musictags::Metadata> load_v23(const id3_v2 &tags, FILE *fp) {
 
   auto result = load_v2x<v23_frame_header>(tags, fp);
 
-  if (!result.null()) {
-    result.get().version = "ID3v2.3";
-  }
+  result.version = "ID3v2.3";
 
   return result;
 }
@@ -263,7 +259,7 @@ struct v24_frame_header {
 };
 
 
-Nullable<musictags::Metadata> load_v24(const id3_v2 &tags, FILE *fp) {
+Optional<musictags::Metadata> load_v24(const id3_v2 &tags, FILE *fp) {
   if (tags.flags & 0x40) {
     uint32_t extended_header_size;
     fread(&extended_header_size, 4, 1, fp);
@@ -272,15 +268,13 @@ Nullable<musictags::Metadata> load_v24(const id3_v2 &tags, FILE *fp) {
 
   auto result = load_v2x<v24_frame_header>(tags, fp);
 
-  if (!result.null()) {
-    result.get().version = "ID3v2.4";
-  }
+  result.version = "ID3v2.4";
 
   return result;
 }
 
 
-Nullable<musictags::Metadata> musictags::id3::v2::load(FILE* fp) {
+Optional<musictags::Metadata> musictags::id3::v2::load(FILE* fp) {
   id3_v2 tags;
 
   fseek(fp, 0, SEEK_SET);
@@ -299,5 +293,5 @@ Nullable<musictags::Metadata> musictags::id3::v2::load(FILE* fp) {
     }
   }
 
-  return Nullable<musictags::Metadata>();
+  return Optional<musictags::Metadata>();
 }

@@ -3,7 +3,7 @@
 #include "hugopeixoto/musictags/id3/v1.h"
 #include "hugopeixoto/musictags/id3/v2.h"
 
-Nullable<musictags::Metadata> musictags::load(const std::string& filename) {
+Optional<musictags::Metadata> musictags::load(const std::string& filename) {
   FILE *fp = fopen(filename.c_str(), "rb");
 
   auto loaders = {
@@ -12,12 +12,12 @@ Nullable<musictags::Metadata> musictags::load(const std::string& filename) {
     musictags::id3::v1::load,
   };
 
-  Nullable<musictags::Metadata> result;
+  Optional<musictags::Metadata> result;
 
   for (const auto loader : loaders) {
     result = loader(fp);
 
-    if (!result.null()) {
+    if (!result.none()) {
       break;
     }
   }

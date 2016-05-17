@@ -4,10 +4,10 @@
 int main(int argc, char* argv[]) {
   auto response = musictags::load(argv[1]);
 
-  if (response.null()) {
-    std::cout << "no tags detected in " << argv[1] << std::endl;
+  if (response.none()) {
+    std::cerr << "no tags detected in " << argv[1] << std::endl;
   } else {
-    auto tags = response.get();
+    auto tags = response.unwrap();
     std::cout << tags.version << std::endl;
     std::cout << "artist: " << tags.artist << std::endl;
     std::cout << "album:  " << tags.album << std::endl;
