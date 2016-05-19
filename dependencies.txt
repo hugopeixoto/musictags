@@ -1,1 +1,1 @@
-hugopeixoto-optional https://github.com/hugopeixoto/optional.git
+https://github.com/hugopeixoto/optional.git
